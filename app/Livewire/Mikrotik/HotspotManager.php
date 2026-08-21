@@ -10,6 +10,7 @@ use App\Models\RouterList;
 use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\Attributes\On;
 
 class HotspotManager extends Component
 {
@@ -95,6 +96,10 @@ class HotspotManager extends Component
     public string $voucherFilter = 'all';
 
     public string $voucherSearch = '';
+
+    // ── SweetAlert Confirmation ──────────────────────────────────────────────
+    public string $pendingAction = '';
+    public $pendingParam = null;
 
     // ── Sale / Income ────────────────────────────────────────────────────────
     public string $s_voucher_code = '';
@@ -664,7 +669,11 @@ class HotspotManager extends Component
     public function removeUser(string $name): void
     {
         try {
-            $this->ctrl()->removeHotspotUser($this->selectedRouter, $name);
+            try {
+                $this->ctrl()->removeHotspotUser($this->selectedRouter, $name);
+            } catch (\Exception $e) {
+                flash()->warning('Router connection failed, removing from database only: ' . $e->getMessage());
+            }
             HotspotVoucher::forRouter($this->selectedRouter)->where('username', $name)->delete();
             flash()->success("User '{$name}' removed.");
             $this->users = $this->ctrl()->getHotspotUsers($this->selectedRouter);
@@ -888,11 +897,29 @@ class HotspotManager extends Component
 
     public function deleteVoucherBatch(string $batch): void
     {
-        HotspotVoucher::where('batch_name', $batch)
+        $vouchers = HotspotVoucher::where('batch_name', $batch)
             ->where('status', 'unused')
-            ->delete();
-        flash()->success("Unused vouchers in batch '{$batch}' deleted.");
+            ->get();
+
+        $routerFailed = 0;
+
+        foreach ($vouchers as $v) {
+            try {
+                $this->ctrl()->removeHotspotUser($this->selectedRouter, $v->username);
+            } catch (\Exception $e) {
+                $routerFailed++;
+            }
+            $v->delete();
+        }
+
+        if ($routerFailed > 0) {
+            flash()->warning("Batch '{$batch}' deleted from DB. {$routerFailed} failed to remove from router.");
+        } else {
+            flash()->success("Unused vouchers in batch '{$batch}' deleted.");
+        }
+        
         $this->loadStats();
+        $this->loadData();
     }
 
     public function triggerPrintBatch(string $batchName): void
@@ -939,6 +966,49 @@ class HotspotManager extends Component
         $this->dispatch('print-vouchers', vouchers: $vouchers, batch: 'Filtered Vouchers', router: $this->selectedRouter);
     }
 
+    public function deleteAllFilteredVouchers(): void
+    {
+        $q = HotspotVoucher::forRouter($this->selectedRouter);
+        if ($this->voucherFilter !== 'all') {
+            $q->where('status', $this->voucherFilter);
+        }
+        if ($this->voucherSearch) {
+            $q->where(function ($q) {
+                $q->where('code', 'like', '%'.$this->voucherSearch.'%')
+                    ->orWhere('batch_name', 'like', '%'.$this->voucherSearch.'%')
+                    ->orWhere('profile', 'like', '%'.$this->voucherSearch.'%');
+            });
+        }
+
+        $vouchers = $q->get();
+        if ($vouchers->isEmpty()) {
+            flash()->warning('No vouchers found matching your filter to delete.');
+            return;
+        }
+
+        $routerFailed = 0;
+        $deletedCount = 0;
+
+        foreach ($vouchers as $v) {
+            try {
+                $this->ctrl()->removeHotspotUser($this->selectedRouter, $v->username);
+            } catch (\Exception $e) {
+                $routerFailed++;
+            }
+            $v->delete();
+            $deletedCount++;
+        }
+
+        if ($routerFailed > 0) {
+            flash()->warning("{$deletedCount} vouchers deleted from DB. {$routerFailed} failed to remove from router.");
+        } else {
+            flash()->success("{$deletedCount} vouchers successfully deleted.");
+        }
+
+        $this->loadStats();
+        $this->loadData();
+    }
+
     public function syncDatabasePackages(): void
     {
         try {
@@ -976,10 +1046,14 @@ class HotspotManager extends Component
             $v = HotspotVoucher::find($id);
             if ($v) {
                 // Remove from Router
-                $this->ctrl()->removeHotspotUser($this->selectedRouter, $v->username);
+                try {
+                    $this->ctrl()->removeHotspotUser($this->selectedRouter, $v->username);
+                } catch (\Exception $e) {
+                    flash()->warning('Router connection failed, removing from database only.');
+                }
                 // Remove from DB
                 $v->delete();
-                flash()->success('Voucher and Router User removed.');
+                flash()->success('Voucher removed.');
             }
             $this->loadData();
         } catch (\Exception $e) {
@@ -1190,5 +1264,49 @@ class HotspotManager extends Component
         return view('livewire.mikrotik.hotspot-manager', compact(
             'routers', 'reportData', 'vouchers', 'voucherBatches', 'sales', 'hotspotPackages'
         ))->layout('layouts.app');
+    }
+
+    public function confirmAction(string $action, $param, string $message): void
+    {
+        $this->pendingAction = $action;
+        $this->pendingParam = $param;
+
+        sweetalert()
+            ->option('confirmButtonText', 'Yes')
+            ->showDenyButton()
+            ->warning($message, ['title' => 'Confirm']);
+    }
+
+    #[On('sweetalert:confirmed')]
+    public function onSweetAlertConfirmed(array $payload): void
+    {
+        if (! $this->pendingAction) return;
+
+        switch ($this->pendingAction) {
+            case 'removeUser':
+                $this->removeUser((string) $this->pendingParam);
+                break;
+            case 'disconnectSession':
+                $this->disconnectSession((string) $this->pendingParam);
+                break;
+            case 'deleteVoucherBatch':
+                $this->deleteVoucherBatch((string) $this->pendingParam);
+                break;
+            case 'deleteAllFilteredVouchers':
+                $this->deleteAllFilteredVouchers();
+                break;
+            case 'deleteSingleVoucher':
+                $this->deleteSingleVoucher((int) $this->pendingParam);
+                break;
+            case 'removeUserProfile':
+                $this->removeUserProfile((string) $this->pendingParam);
+                break;
+            case 'deleteSale':
+                $this->deleteSale((int) $this->pendingParam);
+                break;
+        }
+
+        $this->pendingAction = '';
+        $this->pendingParam = null;
     }
 }

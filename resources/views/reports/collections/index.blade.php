@@ -76,6 +76,7 @@
                             buttons: [
                                 'copy', 'csv', 'excel', 'pdf', 'print'
                             ],
+                            order: [],
                             ajax: {
                                 url: "{{ route('collection-report.index') }}",
                                 data: function (d) {

@@ -364,7 +364,7 @@
                                     <div class="btn-group btn-group-sm">
                                         <button type="button" class="btn btn-outline-info" wire:click="printHotspotUserSlip(@js($u['name'] ?? ''))" title="{{ __('Print credentials') }}"><i class="bi bi-printer"></i></button>
                                         <button type="button" class="btn btn-outline-warning" wire:click="editUserByName(@js($u['name'] ?? ''))"><i class="bi bi-pencil"></i></button>
-                                        <button type="button" class="btn btn-outline-danger" wire:click="removeUser(@js($u['name'] ?? ''))" wire:confirm="{{ __('Permanently delete this hotspot user?') }}"><i class="bi bi-trash"></i></button>
+                                        <button type="button" class="btn btn-outline-danger" wire:click="confirmAction('removeUser', @js($u['name'] ?? ''), @js(__('Permanently delete this hotspot user?')))"><i class="bi bi-trash"></i></button>
                                     </div>
                                 </td>
                             </tr>
@@ -411,9 +411,8 @@
                         <td><small>{{ number_format((int)($s['bytes-out'] ?? 0)/1048576,2) }} MB</small></td>
                         <td><span class="badge bg-info text-dark small">{{ $s['server'] ?? '-' }}</span></td>
                         <td class="no-print">
-                            <button type="button" class="btn btn-danger btn-sm" wire:click="disconnectSession(@js($s['user'] ?? ''))"
-                                wire:confirm="{{ __('Disconnect this user\'s session?') }}">
-                                <i class="bi bi-x-circle me-1"></i>{{ __('Kick') }}
+                            <button type="button" class="btn btn-xs btn-outline-warning" wire:click="confirmAction('disconnectSession', @js($s['user'] ?? ''), @js(__('Disconnect this user\'s session?')))">
+                                <i class="bi bi-x-circle"></i>
                             </button>
                         </td>
                     </tr>
@@ -607,9 +606,8 @@
                                     <span wire:loading.remove wire:target="triggerPrintBatch('{{ $b->batch_name }}')"><i class="bi bi-printer"></i></span>
                                     <span wire:loading wire:target="triggerPrintBatch('{{ $b->batch_name }}')"><span class="spinner-border spinner-border-sm"></span></span>
                                 </button>
-                                <button class="btn btn-xs btn-outline-danger"
-                                    wire:click="deleteVoucherBatch('{{ $b->batch_name }}')"
-                                    wire:confirm="{{ __('Delete all UNUSED vouchers in batch \':name\'?', ['name' => $b->batch_name]) }}">
+                                <button type="button" class="btn btn-xs btn-outline-danger"
+                                    wire:click="confirmAction('deleteVoucherBatch', @js($b->batch_name), @js(__('Delete all UNUSED vouchers in batch \':name\'?', ['name' => $b->batch_name])))">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>
@@ -637,6 +635,9 @@
                 <button class="btn btn-sm btn-outline-success" wire:click="triggerPrintAll" wire:loading.attr="disabled">
                     <span wire:loading.remove wire:target="triggerPrintAll"><i class="bi bi-printer me-1"></i>{{ __('Print All') }}</span>
                     <span wire:loading wire:target="triggerPrintAll" class="spinner-border spinner-border-sm"></span>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" wire:click="confirmAction('deleteAllFilteredVouchers', '', @js(__('Are you sure you want to delete ALL vouchers matching the current filter?')))" wire:loading.attr="disabled">
+                    <i class="bi bi-trash me-1"></i>{{ __('Delete All') }}
                 </button>
             </div>
 
@@ -679,8 +680,7 @@
                                 <td>
                                     <div class="d-flex gap-1 justify-content-center no-print">
                                         <button type="button" class="btn btn-link p-1 text-danger border-0" 
-                                                wire:click="deleteSingleVoucher({{ $v->id }})" 
-                                                wire:confirm="{{ __('Permanent delete voucher :name?', ['name' => $v->username]) }}" title="{{ __('Remove') }}">
+                                                wire:click="confirmAction('deleteSingleVoucher', {{ $v->id }}, @js(__('Permanent delete voucher :name?', ['name' => $v->username])))" title="{{ __('Remove') }}">
                                             <i class="bi bi-dash-square-fill icon-action"></i>
                                         </button>
                                         
@@ -894,8 +894,7 @@
                                 <td class="no-print">
                                     <button class="btn btn-warning btn-sm" wire:click="editUserProfileByName(@js($p['name'] ?? ''))" title="{{ __('Edit') }}"><i class="bi bi-pencil-square"></i></button>
                                     @if(($p['default'] ?? 'no') === 'no')
-                                    <button class="btn btn-danger btn-sm" wire:click="removeUserProfile('{{ $p['name'] ?? '' }}')"
-                                        wire:confirm="{{ __('Remove profile \':name\'?', ['name' => $p['name'] ?? '']) }}"><i class="bi bi-trash"></i></button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" wire:click="confirmAction('removeUserProfile', @js($p['name'] ?? ''), @js(__('Remove profile \':name\'?', ['name' => $p['name'] ?? ''])))"><i class="bi bi-trash"></i></button>
                                     @endif
                                 </td>
                             </tr>
@@ -1019,8 +1018,7 @@
                                 <td><code class="small">{{ $s->voucher_code ?? '—' }}</code></td>
                                 <td><small class="text-muted">{{ $s->note }}</small></td>
                                 <td class="no-print">
-                                    <button class="btn btn-xs btn-outline-danger" wire:click="deleteSale({{ $s->id }})"
-                                        wire:confirm="{{ __('Delete this sale record?') }}"><i class="bi bi-trash"></i></button>
+                                    <button class="btn btn-xs btn-outline-danger" wire:click="confirmAction('deleteSale', {{ $s->id }}, @js(__('Delete this sale record?')))"><i class="bi bi-trash"></i></button>
                                 </td>
                             </tr>
                             @empty

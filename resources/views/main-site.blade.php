@@ -131,11 +131,11 @@
                 @php $slides = $siteData?->hero_slides ?? []; @endphp
                 @if (count($slides) > 0)
                     <div class="carousel-indicators">
-                        @foreach ($slides as $index => $slide)
+                        @foreach ($slides as $slide)
                             <button type="button" data-bs-target="#carouselExampleCaptions"
-                                data-bs-slide-to="{{ $index }}" class="{{ $index === 0 ? 'active' : '' }}"
-                                @if ($index === 0) aria-current="true" @endif
-                                aria-label="Slide {{ $index + 1 }}"></button>
+                                data-bs-slide-to="{{ $loop->index }}" class="{{ $loop->first ? 'active' : '' }}"
+                                @if ($loop->first) aria-current="true" @endif
+                                aria-label="Slide {{ $loop->iteration }}"></button>
                         @endforeach
                     </div>
                 @endif
@@ -143,11 +143,11 @@
                 {{-- Slides --}}
                 <div class="carousel-inner">
                     @if (count($slides) > 0)
-                        @foreach ($slides as $index => $slide)
-                            <div class="carousel-item {{ $index === 0 ? 'active' : '' }}">
+                        @foreach ($slides as $slide)
+                            <div class="carousel-item {{ $loop->first ? 'active' : '' }}">
                                 <img src="{{ isset($slide['image']) ? site_image($slide['image']) : '' }}"
                                     class="img-fluid" style="width: 100%; height: auto; object-fit: cover;"
-                                    alt="{{ $slide['caption'] ?? 'Slide ' . ($index + 1) }}">
+                                    alt="{{ $slide['caption'] ?? 'Slide ' . $loop->iteration }}">
                                 @if (!empty($slide['caption']))
                                     <div class="carousel-caption d-none d-md-block">
                                         <h2 class="display-4 fw-bold">{{ $slide['caption'] }}</h2>

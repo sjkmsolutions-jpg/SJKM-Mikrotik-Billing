@@ -1,6 +1,10 @@
-<div class="zoom-in position-relative">
+    <div>
     <!-- Style tweaks for a premium look -->
     <style>
+        .fi-fo-file-upload .fi-fo-file-upload-editor {
+            width: 100% !important;
+            top: -10% !important;
+        }
         .glass-card {
             background: rgba(var(--bs-body-bg-rgb), 0.6) !important;
             backdrop-filter: blur(16px);
@@ -948,7 +952,7 @@
                         </div>
                     </div>
                 </form>
-            </div>
+        </div>
         </div>
     </div>
     

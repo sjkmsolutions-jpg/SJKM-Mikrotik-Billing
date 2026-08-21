@@ -34,7 +34,7 @@ class CollectionReportController extends Controller
             $customer = $request->collector;
 
             // Build query
-            $query = CollectionSummary::with('customer', 'customer.pppUser')->whereBetween('collection_date', [$from, $to]);
+            $query = CollectionSummary::with('customer', 'customer.pppUser')->whereBetween('collection_date', [$from, $to])->orderBy('created_at', 'desc');
             if ($customer) {
                 $query->where('collected_by', $customer);
             }
