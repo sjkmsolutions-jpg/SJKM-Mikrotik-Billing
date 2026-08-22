@@ -1,1 +1,80 @@
 
+workflows:
+  laravel-build:
+    name: Laravel Build & Test
+    instance_type: linux_x2
+    max_build_duration: 60
+
+    environment:
+      vars:
+        APP_ENV: testing
+        APP_DEBUG: false
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+        CACHE_STORE: array
+        SESSION_DRIVER: array
+        QUEUE_CONNECTION: sync
+      node: 20
+
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+
+    scripts:
+      - name: Check PHP version
+        script: |
+          php -v
+          composer --version
+          node --version
+          npm --version
+
+      - name: Install Composer dependencies
+        script: |
+          composer install \
+            --no-interaction \
+            --prefer-dist \
+            --optimize-autoloader
+
+      - name: Prepare Laravel environment
+        script: |
+          cp .env.example .env
+          php artisan key:generate --force
+
+      - name: Prepare SQLite database
+        script: |
+          mkdir -p database
+          touch database/database.sqlite
+
+      - name: Install Node dependencies
+        script: |
+          npm install
+
+      - name: Build frontend assets
+        script: |
+          npm run build
+
+      - name: Run Laravel migrations
+        script: |
+          php artisan migrate --force
+
+      - name: Clear Laravel caches
+        script: |
+          php artisan optimize:clear
+
+      - name: Run Laravel tests
+        script: |
+          php artisan test
+
+    artifacts:
+      - storage/logs/**/*.log
+      - public/build/**
+
+    cache:
+      cache_paths:
+        - ~/.composer/cache
+        - ~/.npm
